@@ -1,0 +1,16 @@
+.grid-container {display: inline-grid; grid-template-columns: auto auto auto; padding: 10px;
+margin: 10px;}
+.grid-item {background-color: rgba(255, 255, 255, 0.8); border: 1px dashed rgba(0, 0, 0, 0.8);
+padding: 10px; font-size: 25px; text-align: center;}
+.grid-input {width: 50px; font-size: 20px;}
+#wrapper {display: block;}
+#first {float:left; width: 80%; height: 100%;}
+#second {float:left; width: 20%; height: 30%;}
+.d3-context-menu {position: absolute; min-width: 75px; min-height: 75px; z-index: 1200; padding:4px;}
+.d3-context-menu form, .d3-context-menu form input{margin: 0; padding: 5px;}
+.d3-context-menu-theme {background-color: #f2f2f2; border-radius: 4px; font-family: Arial, sans-serif;	font-size: 14px; border: 1px solid #d4d4d4;}
+.d3-context-menu #submit{position:absolute; top:50px; left:20px; padding:4px;}
+.d3-context-menu-theme form {margin: 4px 0;}
+.d3-context-menu-theme form input {padding: 4px;}
+.d3-context-menu-theme form input:hover {background-color: #4677f8; color: #fefefe;}
+.d3-context-menu-theme form input.is-disabled, .d3-context-menu-theme form input.is-disabled:hover {background-color: #f2f2f2; color: #888;}

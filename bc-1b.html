@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Blockchain Explorer Prototype</title>
+  <script src="https://d3js.org/d3.v4.min.js"></script>
+  <link href="./d3-context-menu.css" rel="stylesheet">
+  <script src="./d3-context-menu.js"></script>
+</head>
+
+<body onload="rund3simulation()">
+  <div id="wrapper">
+    <div id="first">
+      <div id="visualization">
+        <svg width="960" height="600"></svg>
+      </div>
+    </div>
+    <div id="second" style="display:none">
+      <div class="grid-container">
+        <div class="grid-item">
+          <input class="grid-input" value="1"/>
+        </div>
+        <div class="grid-item">
+          <input class="grid-input" value="2"/>
+        </div>
+        <div class="grid-item">
+          <input class="grid-input" value="3"/>
+        </div>
+        <div class="grid-item">
+          <input class="grid-input" value="4"/>
+        </div>
+        <div class="grid-item">
+          <input class="grid-input" value="5"/>
+        </div>
+        <div class="grid-item">
+          <input class="grid-input" value="6"/>
+        </div>
+        <div class="grid-item">
+          <input class="grid-input" value="7"/>
+        </div>
+        <div class="grid-item">
+          <input class="grid-input" value="8"/>
+        </div>
+        <div class="grid-item">
+          <input class="grid-input" value="9"/>
+        </div>
+      </div>
+    </div>
+  </div>
+<script>
+
+function rund3simulation() {
+  var nodes = [
+    { id: "wh1", group: 0, label: "Warehouse 1", level: 1 },
+    { id: "v1"   , group: 0, label: "Vendor 1"   , level: 2 },
+    { id: "v2"   , group: 0, label: "Vendor 2"   , level: 2 },
+    { id: "v3"   , group: 0, label: "Vendor 3"  , level: 2 },
+    { id: "r1"   , group: 0, label: "Retail 1"    , level: 3 },
+    { id: "wh2", group: 1, label: "Warehouse 2", level: 1 },
+    { id: "r2"   , group: 1, label: "Retail 2"   , level: 3 },
+    { id: "r3"   , group: 1, label: "Retail 3"   , level: 3 },
+    { id: "wh3"  , group: 2, label: "Warehouse 3"   , level: 1 },]
+  var links = [
+  	{ target: "wh1", source: "v1" , strength: 0.1 },
+  	{ target: "wh1", source: "v2" , strength: 0.1 },
+    { target: "wh2", source: "v3" , strength: 0.1 },
+    { target: "wh3", source: "v3" , strength: 0.1 },
+    { target: "wh1", source: "v3" , strength: 0.2 },
+    { target: "r1", source: "wh1" , strength: 0.09 },
+    { target: "r2", source: "wh1" , strength: 0.09 },
+    { target: "r3"  , source: "wh2", strength: 0.09 },
+    { target: "r3"  , source: "wh3", strength: 0.09 },]
+
+  var buttons = [
+    { x: 0, y: 100 },
+    { x: 0, y: 400 }]
+
+  var selectedNodes = [];
+  var width = window.innerWidth
+  var height = window.innerHeight
+  var svg = d3.select('svg')
+  svg.attr('width', width).attr('height', height)
+
+  // simulation setup with all forces
+  var linkForce = d3
+    .forceLink()
+    .id(function (link) { return link.id })
+    .strength(function (link) { return link.strength })
+
+  var simulation = d3
+    .forceSimulation()
+    .force('link', linkForce)
+    .force('charge', d3.forceManyBody().strength(-650))
+    .force('center', d3.forceCenter(width / 2, height / 2))
+
+  function getNodeColor(node) {
+    return node.level === 1 ? 'red' : node.level === 2 ? 'blue' : 'orange'
+  }
+
+  var toggleColor = (function(){
+     var currentColor = "green";
+      return function(){
+          currentColor = currentColor == "green" ? "magenta" : "green";
+          d3.select(this).style("fill", currentColor);
+          alert('Info for node ' + this);
+      }
+  })();
+
+  var toggleStrokeWidth = (function(){
+     var currentWidth = 1;
+      return function(){
+          currentWidth = currentWidth == 1 ? 3 : 1;
+          d3.select(this).attr("stroke-width", 5)
+          alert('Info for node ' + this);
+      }
+  })();
+
+  var toggleStrokeColor = (function(){
+    var currentColor = "red";
+     return function(){
+         currentColor = currentColor == "red" ? "green" : "red";
+         d3.select(this).attr("stroke", currentColor)
+         alert('Info for node ' + this);
+     }
+  })
+
+  var toggleEditGrid = function() {
+    var x = document.getElementById("second");
+    if (x.style.display == "none") {
+      x.style.display = "block";
+    } else {
+      x.style.display = "none";
+    }
+  }
+
+  var pasteAction = function() {
+    alert('Paste');
+  }
+  
+  // Define your menu
+  var menu = [
+  	{
+  		title: function(d){
+        return d.label
+  		},
+  		action: function(d, i) {
+  			// delete it
+  		}
+  	},
+  	{
+      title: function(d){
+        return d.id
+  		},
+  		action: function(d, i) {
+  			// do nothing interesting
+  		}
+  	}
+  ];
+
+  var lineGenerator = d3.line();
+  var pathString = lineGenerator(nodes);
+  var nodeElements = svg.append("g")
+    .attr("class", "nodes")
+    .selectAll("circle")
+    .data(nodes)
+    .enter().append("circle")
+      .attr("r", 15)
+      .attr("fill", getNodeColor)
+//      .on("click", toggleColor)
+      //.on("contextmenu", d3.contextMenu(menu))
+      .on("click", d3.contextMenu(menu))
+
+  var textElements = svg.append("g")
+    .attr("class", "texts")
+    .selectAll("text")
+    .data(nodes)
+    .enter().append("text")
+      .text(function (node) { return  node.label })
+  	  .attr("font-size", 18)
+  	  .attr("dx", 20)
+      .attr("dy", 5)
+
+  var linkElements = svg.append("g")
+    .attr("class", "links")
+    .selectAll("line")
+    .data(links)
+    .enter().append("line")
+      .attr("stroke-width", 2)
+  	  .attr("stroke", "rgba(60, 50, 50, 0.2)")
+      .on("click", toggleStrokeColor)
+      .on("mouseover", function(d) {d3.select(this).attr("stroke-width", 6)})
+      .on("mouseout", function(d) {d3.select(this).attr("stroke-width", 2)})
+
+  var rectangle = svg.append("rect")
+        .attr("fill", "blue")
+        .attr("x", 10)
+        .attr("y", 10)
+        .attr("width", 60)
+        .attr("height", 60)
+        .on("click", toggleEditGrid);
+
+  simulation.nodes(nodes).on('tick', () => {
+      nodeElements
+        .attr('cx', function (node) { return node.x })
+        .attr('cy', function (node) { return node.y })
+      textElements
+        .attr('x', function (node) { return node.x })
+        .attr('y', function (node) { return node.y })
+      linkElements
+        .attr('x1', function (link) { return link.source.x })
+        .attr('y1', function (link) { return link.source.y })
+        .attr('x2', function (link) { return link.target.x })
+        .attr('y2', function (link) { return link.target.y })
+    })
+
+  simulation.force("link").links(links);
+}
+</script>
+  </body>
+</html>

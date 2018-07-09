@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+<svg width="960" height="600"></svg>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+</head>
+<body>  
+  <!-- Modal -->
+  <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form>
+              <fieldset disabled>
+                <label for="disabledTextInput">Address Field:</label>
+                <ul class="list-group">
+                    <li class="list-group-item" id="selectedAtom">Cras justo odio</li>
+                  </ul>
+              </fieldset>
+              </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">New Node</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  <script>
+    var showModal = function(data){
+       //console.dir(data);
+      let addressList = prepareModal(data);
+      $('#selectedAtom').html(addressList);
+      $('#exampleModalLabel').html(data.label);
+      $('#exampleModal').modal('show');
+    }
+var nodes = [];
+var links = [];
+var buttons = [
+  { x: 0, y: 100 },
+  { x: 0, y: 400 }
+]
+var selectedNodes = [];
+var clipBoard = [];
+
+class DDAtom{
+  constructor(mToken,mAddress){
+    this.token = mToken;
+    this.address = mAddress;
+  }
+  getToken(){return this.token;}
+  getAddress(){return this.address;}
+}
+
+class DDAtomList{
+  constructor(){
+    this.list = [];
+  }
+  set add(atom){
+    this.list.push(atom);
+  }
+  get AtomList(){return this.list}
+  getDDAtomAddress(mToken){
+    let returnAddress;
+    let step;
+    for (step = 0; step < this.list.length-1; step++)
+    {
+      if (this.list[step].token === mToken)
+      {
+        this.returnAddress = this.list[step].address;
+        break;
+      }
+    }
+   return this.returnAddress;
+  }
+  getDDAtomObject(mToken){
+    let returnDDAtom;
+    let step;
+    for (step = 0; step < this.list.length-1; step++)
+    {
+      if (this.list[step].token === mToken)
+      {
+        this.returnDDAtom = this.list[step];
+        break;
+      }
+    }
+   return this.returnDDAtom;
+  }
+}
+
+class Transaction{
+  constructor(mId, mTime, mUser, mComment){
+    this.id = mId;
+    this.time = mTime;
+    this.user = mUser;
+    this.comment = mComment;
+  }
+  print() {
+    console.log(this.id);
+    console.log(this.time);
+    console.log(this.user);
+    console.log(this.comment);
+  }
+}
+
+class TransactionList{
+    constructor()
+    {
+      this.TxList = [];
+    }
+    addTransaction(mTime, mUser, mComment){
+      let transaction = new Transaction(this.TxList.length+1, mTime, mUser, mComment);
+      this.TxList.push(transaction);
+      return transaction;
+    }
+    print(){
+      console.log("PRINTING TRANSACTION TABLE");
+      this.TxList.forEach(element => {
+        element.print();
+      });
+    }
+}
+
+class Point{
+  constructor(id, transaction){
+    this.id = id;
+    this.transaction = transaction;
+    this.stringvalue = "";
+  }
+  setValue(mValue){this.stringvalue = mValue;}
+  print() {
+      console.log(this.id);
+      console.log(this.transaction);
+    }
+}
+
+class PointTable{
+  constructor(){
+    this.PointList = [];
+  }
+  addPoint(mTransaction){
+    let mPoint = new Point(this.PointList.length+1, mTransaction);
+    this.PointList.push(mPoint);
+    return this.PointList.length;
+  }
+  getPoint(mId){
+    return this.PointList[mId];
+  }
+  print(){
+    console.log("PRINTING POINT TABLE");
+    this.PointList.forEach(element => {
+      element.print();
+    });
+  }
+}
+
+class PointNodeMap{
+  constructor(){
+    this.PointNode = new Map();
+  }
+  add(inPoint, inNode){
+    this.PointNode.set(inPoint.id,inNode);
+  }
+  getNode(mPoint){
+    return this.PointNode.get(mPoint.id);
+  }
+  getNodeforPointId(mPointId){
+    return this.PointNode.get(mPointId);
+  }
+}
+
+class Edge{
+  constructor(mSource, mTarget, mEdgeType, mDDAtom){
+    this.edgeType = mEdgeType;
+    this.source = mSource;
+    this.target = mTarget;
+    this.DDAtom = mDDAtom;
+  }
+  getDDAtom(){
+    return this.DDAtom;
+  }
+  getEdgeType() {
+    return this.edgetype;
+  }
+  getSource() {
+    return this.source;
+  }
+  getTarget() {
+    return this.target;
+  }
+  print(){
+    console.log(this.edgeType);
+    console.log(this.source);
+    console.log(this.target);
+    console.log(this.DDAtom);
+  }
+}
+//   Edge   Table
+class EdgeTable{
+  constructor(){
+    this.EdgeList = [];
+  }
+  addEdge(mSource, mTarget, mEdgeType, mDDAtom){
+    let edge = new Edge(mSource, mTarget, mEdgeType, mDDAtom);
+    this.EdgeList.push(edge);
+    return edge;
+  }
+  getEdges(mPoint, mReturnSource,mReturnTarget){
+    this.EdgeList.forEach(element => {
+      if(element.target.id === mPoint.id)
+        mReturnSource.push(element);
+    });
+    this.EdgeList.forEach(element => {
+      if(element.source.id === mPoint.id)
+        mReturnTarget.push(element);
+    });
+  }
+  print(){
+    console.log("PRINTING EDGE TABLE");
+    this.EdgeList.forEach(element => {
+      element.print();
+    });
+  }
+}
+
+class Node{
+  constructor(mEdgeTbl,mPoint){
+    this.point = mPoint;
+    this.processed;
+    this.address = [];
+    this.SourcePoints=[];
+    this.TargetPoints=[];
+    let wrkpoint;
+    mReturnSource = [];
+    mReturnTarget = [];
+    mEdgeTbl.getEdges(point, mReturnSource, mReturnTarget);
+    mReturnSource.forEach(element => {
+      wrkpoint=element.getSource();
+      this.SourcePoints.push(wrkpoint);
+    })
+    mReturnTarget.forEach(element => {
+      wrkpoint = element.getTarget();
+      this.TargetPoints.push(wrkpoint);
+      if (element.getEdgeType() = "ATOMDEF"){
+        let wrkaddress = element.getDDAtom();
+        this.mAddress.push(wrkaddress);
+      }
+    });
+  }
+  addAddressToAddress(mNode){
+    let wrkaddress = [];
+    wrkaddress = mNode.getAddress();
+    wrkaddress.forEach(element => {
+      this.address.push(element);
+    });
+  }
+  getAddress(){
+    return this.address;
+  }
+  print(){
+    console.log(this.address);
+    console.log(this.SourcePoints);
+    console.log(this.TargetPoints);
+  }
+}
+ 
+class NodeList{
+  constructor(){
+    this.NodeListArray = [];
+  }
+  addNode(mEdgeTable,mPoint){
+    let n = new Node(mEdgeTable,mPoint);
+    this.NodeListArray.push(n);
+  }
+  AddSourceNodes(mNode){
+    let sourceArray = [];
+    sourceArray = mNode.sourcePoints;
+    sourceArray.forEach(element => {let sourceNode = new Node();
+      sourceNode.init(element);
+      this.NodeListArray.push(sourceNode);
+    });
+  }
+  Populate(){
+    let i = 0;
+    let NumberOfElements = 1;
+    let ListProcessed = false;
+    let NodesAdded;
+    while(!ListProcessed){
+      if(i<NumberOfElements){
+        this.AddSourceNodes(this.NodeListArray[i]);
+        NodesAdded = this.NodeListArray[i].getNumberOfSourceNodes();
+        NumberOfElements += NodesAdded;
+        i++;
+      } else ListProcessed = true;
+    }
+  }
+  getAddress(){
+    for(let i = this.NodeListArray.length-1; i>0; i--){
+      let targetPointArray = [];
+      targetPointArray = this.NodeListArray[i].targetPoints;
+      let node1 = new Node();
+      targetPointArray.forEach(element => {
+        node1 = this.getNodeForPoint(element);
+        node1.addAddressToAddress(this.NodeListArray[i])
+      });
+    }
+    return this.NodeListArray[0].getAddress();
+  }
+  getNodeForPoint(mPoint){
+    let NodeForPoint;
+    this.NodeListArray.forEach(element => {
+      if(element.point.id === mPoint.id){
+        NodeForPoint = element;
+      }
+    });
+    return NodeForPoint;
+  }
+  print(){
+    console.log ("PRINTING NODE LIST")
+    this.NodeListArray.forEach(element => {
+      element.print();
+    });
+  }
+}
+
+class AddressService{
+  constructor(){
+    this.nodeList = new NodeList();
+  }
+  getAddress(mPoint){
+    this.nodeList.init(mPoint);
+    this.nodeList.Populate();
+    return this.nodeList.getAddress();
+  }
+}
+
+let ddal = new DDAtomList();
+let Atom0 = new DDAtom("Atom0","0");
+let Atom1 = new DDAtom("Atom1","01");
+let Atom2 = new DDAtom("Atom2", "011");
+ddal.add = Atom0;
+ddal.add = Atom1;
+ddal.add = Atom2;
+console.log(ddal);
+
+let mTxList = new TransactionList();
+let pointTbl = new PointTable();
+let EdgeTbl = new EdgeTable();
+let ifdefdebug = true
+let nodeList = new NodeList();
+//Adding Points
+let mTx1 = mTxList.addTransaction("Jan 1 2018 01:01:01", "user1","tx1");
+pointTbl.addPoint(mTx1);
+let mTx2 = mTxList.addTransaction("Jan 1 2018 01:01:02", "user2","tx2");
+pointTbl.addPoint(mTx2);
+let mTx3 = mTxList.addTransaction("Jan 1 2018 01:01:03", "user3","tx3");
+pointTbl.addPoint(mTx3);
+
+//Adding Edges
+let mEdge1 = EdgeTbl.addEdge(pointTbl.PointList[0],pointTbl.PointList[1],"ATOMDEF", "ATOM1")
+let mEdge2 = EdgeTbl.addEdge(pointTbl.PointList[1],pointTbl.PointList[2], "ATOMDEF", "ATOM2");
+
+//  Adding nodes
+let node1 = nodeList.addNode(EdgeTable, pointTbl.getPoint(1));
+let node2 = nodeList.addNode(EdgeTable, pointTbl.getPoint(2));
+let node3 = nodeList.addNode(EdgeTable, pointTbl.getPoint(3));
+// debug
+if(ifdefdebug) {
+  mTxList.print();
+  pointTbl.print();
+  EdgeTbl.print();
+}
+let np1 = new PointNodeMap();
+
+let n0 = new Node();
+n0.init(p0);
+let n1 = new Node();
+n1.init(p1);
+let n2 = new Node();
+n2.init(p2);
+
+np1.add(p0,n0);
+np1.add(p1,n1);
+np1.add(p2,n2);
+
+let addService = new AddressService();
+console.log("Address service p3: ");
+//console.dir(addService.getAddress(p3));
+
+let edgeIterator;
+for ( edgeIterator = 0;edgeIterator < EdgeTbl.EdgeList.length;edgeIterator++)
+{
+  let aEdge = EdgeTbl.EdgeList[edgeIterator];
+  console.log(aEdge);
+  if (aEdge.DDAtom.token === "Atom1")
+  {
+    nodes[p0.id] = {id: "Atom0", label:"Atom0", bwid:p0.id};
+    nodes[aEdge.target.id] = {id: aEdge.DDAtom.getToken(), label: aEdge.DDAtom.getToken(), bwid:aEdge.target.id};
+    links.push({source: "Atom0", target: "Atom1", strength:1});
+  }
+  else
+  {
+    nodes[aEdge.target.id] = {id: aEdge.DDAtom.getToken(), label: aEdge.DDAtom.getToken(), bwid:aEdge.target.id};
+    let sourceNode = np1.getNodeforPointId(aEdge.source.id);
+    links.push({source: sourceNode.ddAtom.token, target: aEdge.DDAtom.getToken(), strength:1});
+  }
+}
+
+var width = window.innerWidth
+var height = window.innerHeight
+var svg = d3.select('svg')
+svg.attr('width', width).attr('height', height)
+var linkForce = d3
+  .forceLink()
+  .id(function (link) { return link.id })
+  .strength(function (link) { return link.strength })
+var simulation = d3
+  .forceSimulation()
+  .force('link', linkForce)
+  .force('charge', d3.forceManyBody().strength(-650))
+  .force('center', d3.forceCenter(width / 2, height / 2))
+function getNodeColor(node) {
+  return 'orange';
+}
+
+var toggleColor = function(element) {
+   var currentColor = d3.select(element).attr("fill");
+   currentColor = currentColor == "green" ? "orange" : "green";
+   d3.select(element).attr("fill", currentColor);
+};
+var toggleStrokeWidth = (function(){
+   var currentWidth = 1;
+    return function(){
+        currentWidth = currentWidth == 1 ? 3 : 1;
+        d3.select(this).attr("stroke-width", 5)
+        alert('Info for node ' + this);
+    }
+})();
+// Define your menu
+var menu = [
+  	{
+  		title: function(d){
+        console.log("form event");
+        console.dir(d);
+        let pointP = new Point();
+        pointP.setId(d.bwid);
+        let as = new AddressService();
+        let addressForPoint = as.getAddress(pointP);
+        console.log("printing point address");
+        console.dir(addressForPoint);
+        let addressLabel = "";
+        addressForPoint.forEach(element => {
+          addressLabel = addressLabel + ":" + element.ddAtom.address;
+        });
+        return addressLabel;
+  		},
+  		action: function(d, i) {
+  			// delete it
+  		}
+  	},
+  	{
+      title: function(d){
+        return d.id
+  		},
+  		action: function(d, i) {
+        // do nothing interesting
+        alert("hi");
+  		}
+  	}
+  ];
+
+function createPoint(){
+    var pointName = document.getElementById("pointName").value;
+    alert(pointName);
+  }
+
+var toggleStrokeColor = (function(){
+  var currentColor = "red";
+   return function(){
+       currentColor = currentColor == "red" ? "green" : "red";
+       d3.select(this).attr("stroke", currentColor)
+       alert('Info for node ' + this);
+   }
+})
+var pasteAction = function() {
+  alert('Paste');
+}
+
+var toggleSelection = function(data){
+  var toggleIndex = selectedNodes.findIndex(function(node){
+    return node.id === data.id;
+  });
+  if (toggleIndex === -1) {
+    selectedNodes.push(data);
+  } else {
+    selectedNodes.splice(toggleIndex,1);
+  }
+}
+
+var prepareModal = function(data){
+  let pointId = data.bwid;
+  let point = pointTbl.getPoint(pointId);
+  let addService1 = new AddressService();
+  let addressArray = addService1.getAddress(point);
+  console.dir(addressArray);
+  console.log(addressArray[0].address);
+  console.log(addressArray[1].address[0].address);
+  console.log(addressArray[1].address[1].ddAtom.address);
+  return addressArray[0].address;
+}
+var lineGenerator = d3.line();
+var pathString = lineGenerator(nodes);
+var nodeElements = svg.append("g")
+  .attr("class", "nodes")
+  .selectAll("circle")
+  .data(nodes)
+  .enter().append("circle")
+    .attr("r", 15)
+    .attr("fill", getNodeColor)
+    .on("click", function(d,i){
+      toggleSelection(d);
+      toggleColor(this);
+    })
+    .on('contextmenu', function(d,i){
+      d3.event.preventDefault();
+      //prepareModal(d);
+      showModal(d);
+    });
+
+    
+var textElements = svg.append("g")
+  .attr("class", "texts")
+  .selectAll("text")
+  .data(nodes)
+  .enter().append("text")
+    .text(function (node) { return  node.label })
+      .attr("font-size", 18)
+      .attr("dx", 20)
+    .attr("dy", 5)
+var linkElements = svg.append("g")
+  .attr("class", "links")
+  .selectAll("line")
+  .data(links)
+  .enter().append("line")
+    .attr("stroke-width", 2)
+      .attr("stroke", "rgba(60, 50, 50, 0.2)")
+    .on("click", toggleStrokeColor)
+    .on("mouseover", function(d) {d3.select(this).attr("stroke-width", 6)})
+    .on("mouseout", function(d) {d3.select(this).attr("stroke-width", 2)})
+var rectangle = svg.append("rect")
+      .attr("fill", "red")
+      .attr("x", 10)
+      .attr("y", 10)
+      .attr("width", 60)
+      .attr("height", 60)
+      .on("click", pasteAction);
+var rectangle = svg.append("rect")
+      .attr("fill", "blue")
+      .attr("x", 90)
+      .attr("y", 10)
+      .attr("width", 60)
+      .attr("height", 60)
+      .on("click", pasteAction);
+simulation.nodes(nodes).on('tick', () => {
+    nodeElements
+      .attr('cx', function (node) { return node.x })
+      .attr('cy', function (node) { return node.y })
+      .append("button").attr("type", "button").attr("class", "btn")
+      .attr("data-toggle", "modal")
+      .attr("data-target", "#example-modal").html("submit")
+    textElements
+      .attr('x', function (node) { return node.x })
+      .attr('y', function (node) { return node.y })
+    linkElements
+      .attr('x1', function (link) { return link.source.x })
+      .attr('y1', function (link) { return link.source.y })
+      .attr('x2', function (link) { return link.target.x })
+      .attr('y2', function (link) { return link.target.y })
+  })
+simulation.force("link").links(links);
+</script>
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+</body>
+</html>
